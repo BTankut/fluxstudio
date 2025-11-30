@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flux Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Ambient Background -->
+    <div class="ambient-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+        <div class="noise-overlay"></div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <div class="logo-mark">
+                    <svg viewBox="0 0 40 40" fill="none">
+                        <circle cx="20" cy="20" r="18" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M20 8 L20 32 M12 14 L28 26 M12 26 L28 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <span class="logo-text">Flux Studio</span>
+            </div>
+            <nav class="nav">
+                <button class="nav-btn active" data-view="create">Create</button>
+                <button class="nav-btn" data-view="gallery">Gallery</button>
+            </nav>
+            <div class="status-indicator" id="statusIndicator">
+                <span class="status-dot"></span>
+                <span class="status-text">Checking...</span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Create View -->
+            <section class="view view-create active" id="viewCreate">
+                <div class="create-layout">
+                    <!-- Left Panel: Input -->
+                    <div class="panel panel-input">
+                        <div class="panel-header">
+                            <h2>Describe Your Vision</h2>
+                            <p class="subtitle">Let AI transform your words into art</p>
+                        </div>
+
+                        <!-- Prompt Input -->
+                        <div class="prompt-section">
+                            <div class="prompt-container">
+                                <textarea
+                                    id="promptInput"
+                                    class="prompt-input"
+                                    placeholder="A serene Japanese garden at twilight, koi pond reflecting cherry blossoms..."
+                                    rows="4"
+                                ></textarea>
+                                <div class="prompt-glow"></div>
+                            </div>
+
+                            <!-- AI Enhancement Toggle -->
+                            <div class="enhancement-toggle">
+                                <label class="toggle-wrapper">
+                                    <input type="checkbox" id="enhanceToggle" checked>
+                                    <span class="toggle-track">
+                                        <span class="toggle-thumb">
+                                            <svg class="toggle-icon" viewBox="0 0 20 20" fill="currentColor">
+                                                <path d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.715-5.349L11 6.477V16h2a1 1 0 110 2H7a1 1 0 110-2h2V6.477L6.237 7.582l1.715 5.349a1 1 0 01-.285 1.05A3.989 3.989 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z"/>
+                                            </svg>
+                                        </span>
+                                    </span>
+                                    <span class="toggle-label">
+                                        <span class="label-main">AI Enhancement</span>
+                                        <span class="label-sub">Optimize prompt for image generation</span>
+                                    </span>
+                                </label>
+                                <select id="enhanceModel" class="model-select">
+                                    <option value="">Loading models...</option>
+                                </select>
+                            </div>
+
+                            <!-- Enhanced Prompt Preview -->
+                            <div class="enhanced-preview" id="enhancedPreview">
+                                <div class="preview-header">
+                                    <span class="preview-label">Enhanced Prompt</span>
+                                    <button class="preview-copy" id="copyEnhanced" title="Copy to clipboard">
+                                        <svg viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M8 2a1 1 0 000 2h2a1 1 0 100-2H8z"/>
+                                            <path d="M3 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v6h-4.586l1.293-1.293a1 1 0 00-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L10.414 13H15v3a2 2 0 01-2 2H5a2 2 0 01-2-2V5z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <p class="preview-text" id="enhancedText">Your enhanced prompt will appear here...</p>
+                            </div>
+                        </div>
+
+                        <!-- Resolution Presets -->
+                        <div class="settings-section">
+                            <h3 class="section-title">Image Resolution</h3>
+                            <div class="resolution-grid" id="resolutionGrid">
+                                <button type="button" class="resolution-btn active" data-width="1024" data-height="1024">
+                                    <div class="res-icon square"></div>
+                                    <span class="res-label">Square</span>
+                                    <span class="res-size">1024×1024</span>
+                                </button>
+                                <button type="button" class="resolution-btn" data-width="1344" data-height="768">
+                                    <div class="res-icon landscape"></div>
+                                    <span class="res-label">Landscape</span>
+                                    <span class="res-size">1344×768</span>
+                                </button>
+                                <button type="button" class="resolution-btn" data-width="768" data-height="1344">
+                                    <div class="res-icon portrait"></div>
+                                    <span class="res-label">Portrait</span>
+                                    <span class="res-size">768×1344</span>
+                                </button>
+                                <button type="button" class="resolution-btn" data-width="1536" data-height="640">
+                                    <div class="res-icon wide"></div>
+                                    <span class="res-label">Cinematic</span>
+                                    <span class="res-size">1536×640</span>
+                                </button>
+                                <button type="button" class="resolution-btn" data-width="1152" data-height="896">
+                                    <div class="res-icon classic"></div>
+                                    <span class="res-label">Classic</span>
+                                    <span class="res-size">1152×896</span>
+                                </button>
+                                <button type="button" class="resolution-btn" data-width="1216" data-height="832">
+                                    <div class="res-icon photo"></div>
+                                    <span class="res-label">Photo</span>
+                                    <span class="res-size">1216×832</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Quality Presets -->
+                        <div class="settings-section">
+                            <h3 class="section-title">Quality</h3>
+                            <div class="quality-grid" id="qualityGrid">
+                                <button type="button" class="quality-btn" data-quality="basic">
+                                    <span class="quality-label">Basic</span>
+                                    <span class="quality-meta">2 steps</span>
+                                </button>
+                                <button type="button" class="quality-btn active" data-quality="mid">
+                                    <span class="quality-label">Standard</span>
+                                    <span class="quality-meta">4 steps</span>
+                                </button>
+                                <button type="button" class="quality-btn" data-quality="high">
+                                    <span class="quality-label">High</span>
+                                    <span class="quality-meta">8 steps</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Advanced Settings -->
+                        <details class="advanced-settings">
+                            <summary class="advanced-toggle">
+                                <span>Advanced Settings</span>
+                                <svg class="chevron" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
+                                </svg>
+                            </summary>
+                            <div class="advanced-content">
+                                <div class="setting-row">
+                                    <label class="setting-label">
+                                        <span>Steps</span>
+                                        <span class="setting-value" id="stepsValue">4</span>
+                                    </label>
+                                    <input type="range" id="stepsSlider" class="slider" min="1" max="12" value="4">
+                                </div>
+                                <div class="setting-row">
+                                    <label class="setting-label">
+                                        <span>Guidance</span>
+                                        <span class="setting-value" id="guidanceValue">3.5</span>
+                                    </label>
+                                    <input type="range" id="guidanceSlider" class="slider" min="1" max="10" step="0.5" value="3.5">
+                                </div>
+                                <div class="setting-row">
+                                    <label class="setting-label">
+                                        <span>Seed</span>
+                                        <span class="setting-hint">Leave empty for random</span>
+                                    </label>
+                                    <div class="seed-input-wrapper">
+                                        <input type="number" id="seedInput" class="seed-input" placeholder="Random">
+                                        <button class="seed-random" id="randomSeed" title="Generate random seed">
+                                            <svg viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </details>
+
+                        <!-- Generate Button -->
+                        <button class="generate-btn" id="generateBtn">
+                            <span class="btn-text">Generate</span>
+                            <span class="btn-loading">
+                                <svg class="spinner" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="60" stroke-linecap="round"/>
+                                </svg>
+                                <span>Creating...</span>
+                            </span>
+                            <div class="btn-shine"></div>
+                        </button>
+                    </div>
+
+                    <!-- Right Panel: Output -->
+                    <div class="panel panel-output">
+                        <div class="output-container" id="outputContainer">
+                            <!-- Empty State -->
+                            <div class="output-empty" id="outputEmpty">
+                                <div class="empty-illustration">
+                                    <svg viewBox="0 0 200 200" fill="none">
+                                        <rect x="40" y="40" width="120" height="120" rx="8" stroke="currentColor" stroke-width="2" stroke-dasharray="8 4"/>
+                                        <circle cx="100" cy="85" r="20" stroke="currentColor" stroke-width="2"/>
+                                        <path d="M60 140 L85 115 L100 130 L130 95 L160 140" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+                                <p class="empty-text">Your creation will appear here</p>
+                                <p class="empty-hint">Describe something amazing and hit Generate</p>
+                            </div>
+
+                            <!-- Loading State -->
+                            <div class="output-loading" id="outputLoading">
+                                <div class="loading-visual">
+                                    <div class="loading-ring"></div>
+                                    <div class="loading-ring"></div>
+                                    <div class="loading-ring"></div>
+                                </div>
+                                <p class="loading-text" id="loadingText">Initializing...</p>
+                                <div class="loading-progress">
+                                    <div class="progress-bar" id="progressBar"></div>
+                                </div>
+                            </div>
+
+                            <!-- Result State -->
+                            <div class="output-result" id="outputResult">
+                                <div class="result-image-wrapper">
+                                    <img id="resultImage" class="result-image" alt="Generated image">
+                                    <div class="image-overlay">
+                                        <button class="overlay-btn" id="downloadBtn" title="Download">
+                                            <svg viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/>
+                                            </svg>
+                                        </button>
+                                        <button class="overlay-btn" id="fullscreenBtn" title="Fullscreen">
+                                            <svg viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h4a1 1 0 010 2H6.414l2.293 2.293a1 1 0 11-1.414 1.414L5 6.414V8a1 1 0 01-2 0V4zm9 1a1 1 0 010-2h4a1 1 0 011 1v4a1 1 0 01-2 0V6.414l-2.293 2.293a1 1 0 11-1.414-1.414L13.586 5H12zm-9 7a1 1 0 012 0v1.586l2.293-2.293a1 1 0 111.414 1.414L6.414 15H8a1 1 0 010 2H4a1 1 0 01-1-1v-4zm13-1a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 010-2h1.586l-2.293-2.293a1 1 0 111.414-1.414L15 13.586V12a1 1 0 011-1z"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="result-meta" id="resultMeta">
+                                    <span class="meta-item" id="sizeMeta">1024 × 1024</span>
+                                    <span class="meta-sep">•</span>
+                                    <span class="meta-item" id="stepsMeta">4 steps</span>
+                                    <span class="meta-sep">•</span>
+                                    <span class="meta-item" id="timeMeta">0s</span>
+                                    <span class="meta-sep">•</span>
+                                    <span class="meta-item" id="seedMeta">Seed: 12345</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Gallery View -->
+            <section class="view view-gallery" id="viewGallery">
+                <div class="gallery-header">
+                    <h2>Your Creations</h2>
+                    <p class="gallery-count" id="galleryCount">0 images</p>
+                </div>
+                <div class="gallery-grid" id="galleryGrid">
+                    <!-- Gallery items will be inserted here -->
+                </div>
+                <div class="gallery-empty" id="galleryEmpty">
+                    <p>No images yet. Start creating!</p>
+                </div>
+            </section>
+        </main>
+
+        <!-- API Key Modal -->
+        <div class="modal" id="apiKeyModal">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content">
+                <h3>Configure OpenRouter API</h3>
+                <p>Enter your OpenRouter API key to enable AI prompt enhancement.</p>
+                <input type="password" id="apiKeyInput" class="api-key-input" placeholder="sk-or-...">
+                <div class="modal-actions">
+                    <button class="modal-btn secondary" id="skipApiKey">Skip for now</button>
+                    <button class="modal-btn primary" id="saveApiKey">Save Key</button>
+                </div>
+                <a href="https://openrouter.ai/keys" target="_blank" class="api-link">Get an API key →</a>
+            </div>
+        </div>
+
+        <!-- Fullscreen Image Modal -->
+        <div class="fullscreen-modal" id="fullscreenModal">
+            <button class="fullscreen-close" id="fullscreenClose">
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/>
+                </svg>
+            </button>
+            <img id="fullscreenImage" class="fullscreen-image" alt="Fullscreen view">
+        </div>
+
+        <!-- Toast Notifications -->
+        <div class="toast-container" id="toastContainer"></div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
