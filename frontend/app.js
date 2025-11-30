@@ -111,7 +111,7 @@ async function init() {
 // Load models from OpenRouter
 async function loadModels() {
     try {
-        const response = await fetch(`${API_BASE}/models`);
+        const response = await fetch(`${API_BASE}/models?t=${Date.now()}`);
         if (!response.ok) {
             elements.enhanceModel.innerHTML = '<option value="">API key required</option>';
             return;
