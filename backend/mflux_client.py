@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from mflux.config.config import Config
 from mflux.config.model_config import ModelConfig
-from mflux.models.flux.variants.txt2img.flux import Flux1
+from mflux.flux.flux import Flux1
 
 
 class MFluxClient:
@@ -36,7 +36,7 @@ class MFluxClient:
         """Load the model if not already loaded."""
         if self._model is None:
             self._model = Flux1(
-                model_config=ModelConfig.from_name(model_name=self.model_name),
+                model_config=ModelConfig.from_alias(alias=self.model_name),
                 quantize=self.quantize,
             )
         return self._model

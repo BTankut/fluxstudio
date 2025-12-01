@@ -116,8 +116,24 @@ async def check_api_key(api_key: str) -> bool:
         return False
 
 
-async def fetch_available_models(api_key: str) -> list:
-    """Fetch available models from OpenRouter API."""
+import json
+from pathlib import Path
+
+CACHE_FILE = Path(__file__).parent / "models_cache.json"
+
+async def fetch_available_models(api_key: str, force_refresh: bool = False) -> list:
+    """Fetch available models from OpenRouter API with caching."""
+    
+    # Check cache first
+    if not force_refresh and CACHE_FILE.exists():
+        try:
+            with open(CACHE_FILE, "r") as f:
+                cache_data = json.load(f)
+                # You might want to check timestamp here if you want auto-expiry
+                return cache_data
+        except Exception as e:
+            print(f"Error reading cache: {e}")
+
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
@@ -132,6 +148,13 @@ async def fetch_available_models(api_key: str) -> list:
             )
 
             if response.status_code != 200:
+                # If API fails but we have cache, return cache even if force_refresh was True
+                if CACHE_FILE.exists():
+                    try:
+                        with open(CACHE_FILE, "r") as f:
+                            return json.load(f)
+                    except:
+                        pass
                 return []
 
             data = response.json()
@@ -155,8 +178,23 @@ async def fetch_available_models(api_key: str) -> list:
 
             # Sort by name
             models.sort(key=lambda x: x["name"])
+            
+            # Save to cache
+            try:
+                with open(CACHE_FILE, "w") as f:
+                    json.dump(models, f, indent=2)
+            except Exception as e:
+                print(f"Error saving cache: {e}")
+                
             return models
 
     except Exception as e:
         print(f"Error fetching models: {e}")
+        # Fallback to cache on error
+        if CACHE_FILE.exists():
+            try:
+                with open(CACHE_FILE, "r") as f:
+                    return json.load(f)
+            except:
+                pass
         return []

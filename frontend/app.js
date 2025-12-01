@@ -24,17 +24,26 @@ function initElements() {
         navBtns: document.querySelectorAll('.nav-btn'),
         viewCreate: document.getElementById('viewCreate'),
         viewGallery: document.getElementById('viewGallery'),
+        settingsBtn: document.getElementById('settingsBtn'),
 
         // Status
         statusIndicator: document.getElementById('statusIndicator'),
 
         // Prompt
         promptInput: document.getElementById('promptInput'),
-        enhanceToggle: document.getElementById('enhanceToggle'),
-        enhanceModel: document.getElementById('enhanceModel'),
-        enhancedPreview: document.getElementById('enhancedPreview'),
-        enhancedText: document.getElementById('enhancedText'),
-        copyEnhanced: document.getElementById('copyEnhanced'),
+        enhanceBtn: document.getElementById('enhanceBtn'),
+
+        // Custom Dropdown Elements
+        modelSelect: document.getElementById('modelSelect'),
+        modelTrigger: document.getElementById('modelTrigger'),
+        modelOptions: document.getElementById('modelOptions'),
+        modelSearch: document.getElementById('modelSearch'),
+        selectedModelText: document.querySelector('.selected-model'),
+        refreshModelsBtn: document.getElementById('refreshModelsBtn'),
+
+        // enhancedPreview: document.getElementById('enhancedPreview'),
+        // enhancedText: document.getElementById('enhancedText'),
+        // copyEnhanced: document.getElementById('copyEnhanced'),
 
         // Resolution
         resolutionGrid: document.getElementById('resolutionGrid'),
@@ -80,6 +89,8 @@ function initElements() {
         // Modals
         apiKeyModal: document.getElementById('apiKeyModal'),
         apiKeyInput: document.getElementById('apiKeyInput'),
+        currentKeyDisplay: document.getElementById('currentKeyDisplay'),
+        keyLastChars: document.getElementById('keyLastChars'),
         skipApiKey: document.getElementById('skipApiKey'),
         saveApiKey: document.getElementById('saveApiKey'),
         fullscreenModal: document.getElementById('fullscreenModal'),
@@ -109,44 +120,127 @@ async function init() {
 }
 
 // Load models from OpenRouter
-async function loadModels() {
+async function loadModels(refresh = false) {
     try {
-        const response = await fetch(`${API_BASE}/models?t=${Date.now()}`);
+        if (refresh) {
+            elements.refreshModelsBtn.classList.add('loading');
+        } else {
+            elements.selectedModelText.textContent = 'Loading models...';
+        }
+
+        const response = await fetch(`${API_BASE}/models?refresh=${refresh}`);
+
+        if (refresh) {
+            elements.refreshModelsBtn.classList.remove('loading');
+        }
+
         if (!response.ok) {
-            elements.enhanceModel.innerHTML = '<option value="">API key required</option>';
+            elements.selectedModelText.textContent = 'API key required';
             return;
         }
 
         const data = await response.json();
-        elements.enhanceModel.innerHTML = '';
+        state.availableModels = data.models || [];
 
-        if (data.models && data.models.length > 0) {
-            data.models.forEach(model => {
-                const option = document.createElement('option');
-                option.value = model.id;
-                option.textContent = model.name;
-                option.title = model.description || '';
-                elements.enhanceModel.appendChild(option);
-            });
+        renderModelOptions(state.availableModels);
 
-            // Select first model by default
-            if (data.models.length > 0) {
-                elements.enhanceModel.value = data.models[0].id;
+        if (state.availableModels.length > 0) {
+            // Select first model if none selected
+            if (!state.currentEnhanceModel) {
+                selectModel(state.availableModels[0]);
             }
         } else {
-            elements.enhanceModel.innerHTML = '<option value="">No models available</option>';
+            elements.selectedModelText.textContent = 'No models available';
         }
     } catch (error) {
         console.error('Failed to load models:', error);
-        elements.enhanceModel.innerHTML = '<option value="">Failed to load models</option>';
+        elements.selectedModelText.textContent = 'Failed to load models';
+        if (refresh) elements.refreshModelsBtn.classList.remove('loading');
     }
+}
+
+function renderModelOptions(models) {
+    elements.modelOptions.innerHTML = '';
+
+    if (models.length === 0) {
+        elements.modelOptions.innerHTML = '<div class="select-option">No models found</div>';
+        return;
+    }
+
+    models.forEach(model => {
+        const div = document.createElement('div');
+        div.className = 'select-option';
+        if (state.currentEnhanceModel && state.currentEnhanceModel.id === model.id) {
+            div.classList.add('selected');
+        }
+        div.textContent = model.name;
+        div.dataset.id = model.id;
+        div.title = model.description || '';
+
+        div.addEventListener('click', () => {
+            selectModel(model);
+            elements.modelSelect.querySelector('.select-dropdown').classList.remove('active');
+        });
+
+        elements.modelOptions.appendChild(div);
+    });
+}
+
+function selectModel(model) {
+    state.currentEnhanceModel = model;
+    elements.selectedModelText.textContent = model.name;
+
+    // Update UI selection
+    const options = elements.modelOptions.querySelectorAll('.select-option');
+    options.forEach(opt => {
+        opt.classList.toggle('selected', opt.dataset.id === model.id);
+    });
 }
 
 // Event Listeners
 function setupEventListeners() {
     // Navigation
     elements.navBtns.forEach(btn => {
-        btn.addEventListener('click', () => switchView(btn.dataset.view));
+        if (btn.dataset.view) {
+            btn.addEventListener('click', () => switchView(btn.dataset.view));
+        }
+    });
+
+    // Settings button
+    if (elements.settingsBtn) {
+        elements.settingsBtn.addEventListener('click', () => {
+            updateKeyDisplay();
+            elements.apiKeyModal.classList.add('visible');
+            elements.apiKeyInput.focus();
+        });
+    }
+
+    // Custom Dropdown
+    document.addEventListener('click', (e) => {
+        if (!elements.modelSelect.contains(e.target)) {
+            elements.modelSelect.querySelector('.select-dropdown').classList.remove('active');
+        }
+    });
+
+    elements.modelTrigger.addEventListener('click', () => {
+        elements.modelSelect.querySelector('.select-dropdown').classList.toggle('active');
+        if (elements.modelSelect.querySelector('.select-dropdown').classList.contains('active')) {
+            elements.modelSearch.focus();
+        }
+    });
+
+    elements.modelSearch.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        const filtered = state.availableModels.filter(m =>
+            m.name.toLowerCase().includes(term) ||
+            m.id.toLowerCase().includes(term)
+        );
+        renderModelOptions(filtered);
+    });
+
+    elements.refreshModelsBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        loadModels(true);
     });
 
     // Resolution buttons - use event delegation
@@ -179,7 +273,9 @@ function setupEventListeners() {
     elements.generateBtn.addEventListener('click', generateImage);
 
     // Copy enhanced prompt
-    elements.copyEnhanced.addEventListener('click', copyEnhancedPrompt);
+    // if (elements.copyEnhanced) {
+    //     elements.copyEnhanced.addEventListener('click', copyEnhancedPrompt);
+    // }
 
     // Download button
     elements.downloadBtn.addEventListener('click', downloadImage);
@@ -200,14 +296,16 @@ function setupEventListeners() {
     // Keyboard shortcuts
     document.addEventListener('keydown', handleKeyboard);
 
-    // Prompt input - debounced enhancement preview
-    let enhanceTimeout;
+    // Prompt input - auto-resize
     elements.promptInput.addEventListener('input', () => {
-        clearTimeout(enhanceTimeout);
-        if (elements.enhanceToggle.checked && elements.promptInput.value.length > 10) {
-            enhanceTimeout = setTimeout(previewEnhancement, 1500);
-        }
+        elements.promptInput.style.height = 'auto';
+        elements.promptInput.style.height = elements.promptInput.scrollHeight + 'px';
     });
+
+    // Enhance Button
+    if (elements.enhanceBtn) {
+        elements.enhanceBtn.addEventListener('click', enhancePrompt);
+    }
 }
 
 // Navigation
@@ -280,11 +378,28 @@ async function checkHealth() {
 
         state.apiKeyConfigured = data.openrouter_configured;
 
-        // Show API key modal if not configured
-        if (!state.apiKeyConfigured && !localStorage.getItem('openrouter_api_key')) {
-            setTimeout(() => {
-                elements.apiKeyModal.classList.add('visible');
-            }, 1000);
+        // Restore API key if backend forgot it but we have it
+        if (!state.apiKeyConfigured) {
+            const storedKey = localStorage.getItem('openrouter_api_key');
+            if (storedKey) {
+                // Silently restore key
+                fetch(`${API_BASE}/config`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ openrouter_api_key: storedKey })
+                }).then(async (res) => {
+                    if (res.ok) {
+                        state.apiKeyConfigured = true;
+                        // Reload models after restoring key
+                        loadModels();
+                    }
+                });
+            } else {
+                // Show API key modal if not configured and not in storage
+                setTimeout(() => {
+                    elements.apiKeyModal.classList.add('visible');
+                }, 1000);
+            }
         }
 
     } catch (error) {
@@ -338,8 +453,8 @@ async function generateImage() {
             width: state.currentResolution.width,
             height: state.currentResolution.height,
             quality_preset: state.currentQuality,
-            enhance_prompt: elements.enhanceToggle.checked,
-            enhancement_model: elements.enhanceModel.value
+            enhance_prompt: false, // Manual enhancement only
+            enhancement_model: state.currentEnhanceModel ? state.currentEnhanceModel.id : ""
         };
 
         const seedValue = elements.seedInput.value.trim();
@@ -348,10 +463,10 @@ async function generateImage() {
         }
 
         // Show progress stages
-        if (requestData.enhance_prompt) {
-            updateLoadingText('Enhancing prompt with AI...');
-            updateProgress(10);
-        }
+        // if (requestData.enhance_prompt) {
+        //     updateLoadingText('Enhancing prompt with AI...');
+        //     updateProgress(10);
+        // }
 
         // Simulate progress updates
         const progressInterval = setInterval(() => {
@@ -390,10 +505,6 @@ async function generateImage() {
             // Show enhanced prompt if used
             if (result.enhanced_prompt) {
                 state.enhancedPrompt = result.enhanced_prompt;
-                elements.enhancedText.textContent = result.enhanced_prompt;
-                elements.enhancedPreview.classList.add('visible');
-            } else {
-                elements.enhancedPreview.classList.remove('visible');
             }
 
             setOutputState('result');
@@ -413,12 +524,29 @@ async function generateImage() {
     }
 }
 
-// Preview Enhancement
-async function previewEnhancement() {
-    if (!state.apiKeyConfigured) return;
+// Enhance Prompt (Manual)
+async function enhancePrompt() {
+    if (!state.apiKeyConfigured) {
+        showToast('Please configure API key first', 'error');
+        elements.apiKeyModal.classList.add('visible');
+        return;
+    }
 
     const prompt = elements.promptInput.value.trim();
-    if (!prompt || prompt.length < 10) return;
+    if (!prompt || prompt.length < 3) {
+        showToast('Please enter a prompt to enhance', 'error');
+        elements.promptInput.focus();
+        return;
+    }
+
+    if (elements.enhanceBtn.classList.contains('loading')) return;
+
+    elements.enhanceBtn.classList.add('loading');
+    const originalText = elements.enhanceBtn.innerHTML;
+    elements.enhanceBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+        </svg> Enhancing...`;
 
     try {
         const response = await fetch(`${API_BASE}/enhance`, {
@@ -428,19 +556,36 @@ async function previewEnhancement() {
             },
             body: JSON.stringify({
                 prompt: prompt,
-                model: elements.enhanceModel.value
+                model: state.currentEnhanceModel ? state.currentEnhanceModel.id : ""
             })
         });
 
         const result = await response.json();
 
         if (result.success) {
-            state.enhancedPrompt = result.enhanced;
-            elements.enhancedText.textContent = result.enhanced;
-            elements.enhancedPreview.classList.add('visible');
+            // Update input with enhanced prompt
+            elements.promptInput.value = result.enhanced;
+            // Trigger input event to resize if needed
+            elements.promptInput.dispatchEvent(new Event('input'));
+
+            showToast('Prompt enhanced successfully!', 'success');
+
+            // Highlight effect
+            elements.promptInput.style.transition = 'background-color 0.3s';
+            const originalBg = elements.promptInput.style.backgroundColor;
+            elements.promptInput.style.backgroundColor = 'rgba(212, 168, 83, 0.1)';
+            setTimeout(() => {
+                elements.promptInput.style.backgroundColor = originalBg;
+            }, 500);
+        } else {
+            throw new Error(result.error || 'Enhancement failed');
         }
     } catch (error) {
-        console.error('Enhancement preview error:', error);
+        console.error('Enhancement error:', error);
+        showToast('Failed to enhance prompt', 'error');
+    } finally {
+        elements.enhanceBtn.classList.remove('loading');
+        elements.enhanceBtn.innerHTML = originalText;
     }
 }
 
@@ -473,12 +618,91 @@ async function copyEnhancedPrompt() {
 }
 
 // Download Image
-function downloadImage() {
-    const link = document.createElement('a');
-    link.href = elements.resultImage.src;
-    link.download = `flux_${Date.now()}.png`;
-    link.click();
-    showToast('Image downloaded', 'success');
+async function downloadImage() {
+    if (!elements.resultImage.src) return;
+
+    try {
+        // Fetch the image as a blob
+        const response = await fetch(elements.resultImage.src);
+        if (!response.ok) throw new Error('Network response was not ok');
+        const blob = await response.blob();
+
+        // Use File System Access API if available (modern browsers)
+        if (window.showSaveFilePicker) {
+            try {
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: `flux_${Date.now()}.png`,
+                    types: [{
+                        description: 'PNG Image',
+                        accept: { 'image/png': ['.png'] },
+                    }],
+                });
+                const writable = await handle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                showToast('Image saved successfully', 'success');
+                return;
+            } catch (err) {
+                if (err.name === 'AbortError') return; // User cancelled
+                // Fallback to classic download if picker fails but wasn't cancelled
+                console.warn('File picker failed, falling back to classic download', err);
+            }
+        }
+
+        // Classic download fallback (creates a blob URL)
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.style.display = 'none';
+        link.href = url;
+        link.download = `flux_${Date.now()}.png`;
+        // link.target = '_blank'; // Removed to prevent opening in new tab
+        document.body.appendChild(link);
+        link.click();
+
+        // Cleanup
+        setTimeout(() => {
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(link);
+        }, 100);
+
+        showToast('Image downloaded', 'success');
+    } catch (e) {
+        console.error('Download error:', e);
+        showToast('Download failed', 'error');
+    }
+}
+
+// Save Image Helper
+async function saveImage(blob, filename) {
+    try {
+        if (window.showSaveFilePicker) {
+            const handle = await window.showSaveFilePicker({
+                suggestedName: filename,
+                types: [{
+                    description: 'PNG Image',
+                    accept: { 'image/png': ['.png'] },
+                }],
+            });
+            const writable = await handle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+            showToast('Image saved successfully', 'success');
+        } else {
+            // Fallback
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.click();
+            URL.revokeObjectURL(url);
+            showToast('Image downloaded', 'success');
+        }
+    } catch (err) {
+        if (err.name !== 'AbortError') {
+            console.error('Save failed:', err);
+            showToast('Failed to save image', 'error');
+        }
+    }
 }
 
 // Fullscreen
@@ -514,23 +738,95 @@ async function loadGallery() {
             const item = document.createElement('div');
             item.className = 'gallery-item';
             item.innerHTML = `
-                <img src="${API_BASE}${image.url}" alt="Generated image" loading="lazy">
-                <div class="gallery-item-overlay">
-                    <span class="gallery-item-meta">${image.metadata?.prompt?.slice(0, 50) || 'No prompt'}...</span>
+                <div class="gallery-image-wrapper">
+                    <img src="${API_BASE}${image.url}" alt="Generated image" loading="lazy">
+                    <div class="gallery-actions">
+                        <button type="button" class="gallery-action-btn view-btn" title="View Fullscreen">
+                            <svg viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                                <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
+                        <button type="button" class="gallery-action-btn download-btn" title="Download">
+                            <svg viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/>
+                            </svg>
+                        </button>
+                        <button type="button" class="gallery-action-btn delete-btn" data-filename="${image.filename}" title="Delete">
+                            <svg viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
-                <button type="button" class="gallery-delete-btn" data-filename="${image.filename}" title="Delete image">
-                    <svg viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                    </svg>
-                </button>
+                <div class="gallery-info">
+                    <p class="gallery-prompt" title="${image.metadata?.prompt}">${image.metadata?.prompt || 'No prompt'}</p>
+                    <div class="gallery-meta-tags">
+                        <span class="meta-tag" title="Resolution">${image.metadata?.width}×${image.metadata?.height}</span>
+                        <span class="meta-tag" title="Steps">${image.metadata?.steps} steps</span>
+                        <span class="meta-tag" title="Generation Time">${formatTime(image.metadata?.generation_time)}</span>
+                        <span class="meta-tag" title="Seed">Seed: ${image.metadata?.seed}</span>
+                    </div>
+                </div>
             `;
 
-            // Click on image opens fullscreen
-            const img = item.querySelector('img');
-            img.addEventListener('click', () => openFullscreen(`${API_BASE}${image.url}`));
+            // View button
+            const viewBtn = item.querySelector('.view-btn');
+            viewBtn.addEventListener('click', () => openFullscreen(`${API_BASE}${image.url}`));
 
-            // Click on delete button
-            const deleteBtn = item.querySelector('.gallery-delete-btn');
+            // Download button
+            const downloadBtn = item.querySelector('.download-btn');
+            downloadBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                try {
+                    // Fetch the image as a blob
+                    const response = await fetch(`${API_BASE}${image.url}`);
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    const blob = await response.blob();
+
+                    // Use File System Access API if available
+                    if (window.showSaveFilePicker) {
+                        try {
+                            const handle = await window.showSaveFilePicker({
+                                suggestedName: image.filename,
+                                types: [{
+                                    description: 'PNG Image',
+                                    accept: { 'image/png': ['.png'] },
+                                }],
+                            });
+                            const writable = await handle.createWritable();
+                            await writable.write(blob);
+                            await writable.close();
+                            showToast('Image saved successfully', 'success');
+                            return;
+                        } catch (err) {
+                            if (err.name === 'AbortError') return;
+                        }
+                    }
+
+                    // Classic download fallback
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.style.display = 'none';
+                    link.href = url;
+                    link.download = image.filename;
+                    // link.target = '_blank'; // Removed to prevent opening in new tab
+                    document.body.appendChild(link);
+                    link.click();
+
+                    setTimeout(() => {
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(link);
+                    }, 100);
+
+                } catch (error) {
+                    console.error('Download error:', error);
+                    showToast('Download failed', 'error');
+                }
+            });
+
+            // Delete button
+            const deleteBtn = item.querySelector('.delete-btn');
             deleteBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 deleteGalleryImage(image.filename);
@@ -593,11 +889,22 @@ async function saveApiKey() {
             state.apiKeyConfigured = true;
             elements.apiKeyModal.classList.remove('visible');
             showToast('API key saved successfully', 'success');
+            loadModels(true); // Refresh models with new key
         } else {
             throw new Error('Invalid API key');
         }
     } catch (error) {
         showToast('Invalid API key', 'error');
+    }
+}
+
+function updateKeyDisplay() {
+    const storedKey = localStorage.getItem('openrouter_api_key');
+    if (storedKey && storedKey.length > 4) {
+        elements.currentKeyDisplay.style.display = 'block';
+        elements.keyLastChars.textContent = storedKey.slice(-4);
+    } else {
+        elements.currentKeyDisplay.style.display = 'none';
     }
 }
 

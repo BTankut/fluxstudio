@@ -47,6 +47,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Serve outputs directory
+# Serve outputs directory - handled by get_output endpoint
+# app.mount("/outputs", StaticFiles(directory=str(OUTPUT_DIR)), name="outputs")
+
 # mflux client (lazy initialization to avoid slow startup)
 mflux_client = None
 
@@ -148,12 +152,12 @@ async def get_config():
 
 
 @app.get("/models")
-async def get_models():
+async def get_models(refresh: bool = False):
     """Fetch available models from OpenRouter."""
     if not OPENROUTER_API_KEY:
         raise HTTPException(status_code=400, detail="OpenRouter API key not configured")
 
-    models = await fetch_available_models(OPENROUTER_API_KEY)
+    models = await fetch_available_models(OPENROUTER_API_KEY, force_refresh=refresh)
     return {"models": models}
 
 
@@ -280,13 +284,22 @@ async def generate_image(request: GenerateRequest):
         )
 
 
+# Serve outputs directory - REMOVED to avoid conflict with manual endpoint
+# app.mount("/outputs", StaticFiles(directory=str(OUTPUT_DIR)), name="outputs")
+
 @app.get("/outputs/{filename}")
 async def get_output(filename: str):
-    """Serve generated images."""
+    """Serve generated images with CORS and attachment headers."""
     filepath = OUTPUT_DIR / filename
     if not filepath.exists():
         raise HTTPException(status_code=404, detail="Image not found")
-    return FileResponse(filepath)
+    
+    response = FileResponse(filepath)
+    # Explicitly add CORS headers (though middleware should handle it)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    # Force download behavior
+    response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
 
 
 @app.get("/gallery")
